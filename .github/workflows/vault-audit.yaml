@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Rotate Audit Logs
         env:
-          K8S_TOKEN: "${{ secrets.K8S_TOKEN }}"
+          VAULT_LOGROTATE_TOKEN: "${{ secrets.VAULT_LOGROTATE_TOKEN }}" # k create token -n prod-core-vault logrotate --duration 876000h | gh secret set VAULT_LOGROTATE_TOKEN
         run: vault/rotate-audit-logs
       - name: Archive Audit Logs
         uses: actions/upload-artifact@v4

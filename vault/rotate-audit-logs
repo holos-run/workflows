@@ -14,7 +14,7 @@ trap finish EXIT
 
 export KUBECONFIG="${tmpdir}/config"
 kubectl config set-cluster core --server=https://core2.core.ois.run:6443 --embed-certs --certificate-authority "${PARENT}/cluster.crt"
-kubectl config set-credentials logrotate --token="${K8S_TOKEN}"
+kubectl config set-credentials logrotate --token="${VAULT_LOGROTATE_TOKEN}"
 kubectl config set-context vault --cluster=core --user=logrotate --namespace=prod-core-vault
 kubectl config use-context vault
 
