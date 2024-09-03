@@ -1,0 +1,22 @@
+name: Rotate Vault Audit Logs
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 11 * * 2" # 4 AM Tuesday US/Pacific (11 AM Tuesday UTC)
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Rotate Audit Logs
+        env:
+          K8S_TOKEN: "${{ secrets.K8S_TOKEN }}"
+        run: vault/rotate-audit-logs
+      - name: Archive Audit Logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: vault-audit-logs
+          path: vault.tgz.asc

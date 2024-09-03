@@ -1,0 +1,39 @@
+#! /bin/bash
+
+set -euo pipefail
+
+TOPLEVEL="$(pwd)"
+PARENT="$(cd $(dirname "$0") && pwd)"
+tmpdir="$(mktemp -d)"
+finish() {
+  local code="$?"
+  [[ -d "${tmpdir}" ]] && rm -rf "${tmpdir}"
+  exit $code
+}
+trap finish EXIT
+
+export KUBECONFIG="${tmpdir}/config"
+kubectl config set-cluster core --server=https://core2.core.ois.run:6443 --embed-certs --certificate-authority "${PARENT}/cluster.crt"
+kubectl config set-credentials logrotate --token="${K8S_TOKEN}"
+kubectl config set-context vault --cluster=core --user=logrotate --namespace=prod-core-vault
+kubectl config use-context vault
+
+mkdir -p "${tmpdir}/vault"
+cd "${tmpdir}/vault"
+stamp="$(date +%s)"
+
+for pod in $(kubectl get pods -l app.kubernetes.io/name=vault -o name)
+do
+  name="${pod##*/}"
+  kubectl exec $name -- touch /var/log/vault/audit.log
+  kubectl exec $name -- mv /var/log/vault/audit.log /var/log/vault/audit.log.closed
+  kubectl exec $name -- killall -HUP vault
+  kubectl cp $name:/var/log/vault/audit.log.closed "audit.log.${stamp}.${name}"
+  kubectl exec $name -- rm -fv /var/log/vault/audit.log.closed
+  kubectl exec $name -- touch /var/log/vault/audit.log
+done
+
+cd "$tmpdir"
+tar cvzf vault.tgz vault
+gpg --import "${PARENT}/public-key.txt"
+gpg --trust-model always --batch --yes --armor --output "${TOPLEVEL}/vault.tgz.asc" --encrypt --recipient jeff@openinfrastructure.co vault.tgz
